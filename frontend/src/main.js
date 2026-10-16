@@ -191,6 +191,7 @@ const state = {
   agentMessages: normalizeChatHistory(readJson(STORAGE.chat, readJson(STORAGE.chatBackup, []))),
   agentVisuals: Array.isArray(readJson(STORAGE.visuals, [])) ? readJson(STORAGE.visuals, []).slice(0, 12) : [],
   agentLoading: false,
+  agentStep: null,
   agentDraft: '',
   agentAutoSuppressed: false,
   agentReturnRoute: 'overview',

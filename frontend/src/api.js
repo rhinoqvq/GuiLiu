@@ -446,6 +446,10 @@ export class ApiClient {
   getChatHistory(sessionId, parameters, signal, agentPath) {
     return this.chatHistoryRequest('/' + encodeURIComponent(sessionId) + '/history', parameters, signal, agentPath);
   }
+  // What the session's running turn is doing now: idle, thinking, or the tool it runs.
+  chatActivity(sessionId, signal, agentPath) {
+    return this.chatHistoryRequest('/' + encodeURIComponent(sessionId) + '/activity', {}, signal, agentPath);
+  }
 
   deleteChatSession(sessionId, agentPath) {
     if (agentPath && agentPath !== this.settings().agentPath) return new ApiClient(() => ({ ...this.settings(), agentPath })).deleteChatSession(sessionId);

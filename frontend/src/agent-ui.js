@@ -1,6 +1,7 @@
 import { profileName, profilePicture } from './user-profile.js';
 import { escapeHtml as html, escapeAttr as attr, simpleRichText, formatDateTime } from './utils.js';
 import { agentText, agentQuestions } from './agent-copy.js';
+import { activityLabel } from './agent-activity.js';
 import { patchCanvas } from './agent-canvas.js';
 import { createReplyMotion } from './agent-reply-motion.js';
 import { disposeAgentMotion as stopAgentMotion } from './agent-motion.js';
@@ -26,7 +27,8 @@ function patchAgentStatus() {
     ? state.agentMessages.at(-1)?.content ? 'receivingReply' : 'waitingReply' : '';
   loading.hidden = !phase;
   const label = loading.querySelector('[data-agent-status-text]');
-  const content = phase ? agentText(language, phase) : '';
+  // While nothing has arrived yet, say what the Agent is doing (thinking, or which tool) when it has told us.
+  const content = (phase === 'waitingReply' && activityLabel(language, state.agentStep)) || (phase ? agentText(language, phase) : '');
   if (label && label.textContent !== content) label.textContent = content;
 }
 

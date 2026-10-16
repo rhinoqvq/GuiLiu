@@ -31,12 +31,15 @@ def call_agent_user_api(base_url: str, prompt: str):
             "error": str(e)
         }
 
-def call_agent_ocr_api(base_url: str, promptInput: str, file_path: str):
+def call_agent_ocr_api(base_url: str, promptInput: str, file_path: str, source_id: str | None = None):
     url = f"{base_url}/agent/OCR_request"
 
     data = {
         "promptInput": promptInput
     }
+    # The Agent logs one row per vision call under this ID, so distinct images can be counted.
+    if source_id:
+        data["source_id"] = source_id
 
     try:
         # 当前工作目录

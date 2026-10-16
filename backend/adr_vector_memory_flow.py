@@ -357,7 +357,7 @@ def prepare_ocr_evidence(gmail, msgid, image, agent_base_url, db, *, ocr_prompt_
 
         # The existing downloader verifies and reuses complete local files.
         image_path = gmail.download_gmail_image(msgid, image)
-        result = call_agent_ocr_api(agent_base_url, ocr_prompt_input, image_path)
+        result = call_agent_ocr_api(agent_base_url, ocr_prompt_input, image_path, source_id)
         if not result.get("success") or not str(result.get("result") or "").strip():
             raise RuntimeError("OCR failed: " + str(result.get("error") or "empty text"))
         text = result["result"]

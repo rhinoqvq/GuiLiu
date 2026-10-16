@@ -213,10 +213,28 @@ export function createAgentChat({ state, api, storage = localStorage, changed, o
     sessionId = response.session_id; pending.body.session_id = sessionId;
     state.agentHistory.sessionId = sessionId;
   };
+  // While the reply is pending, ask the Agent once a second what it is doing, for the status line.
+  const watchSteps = () => {
+    if (typeof api.chatActivity !== 'function') return () => {};
+    let busy = false, stopped = false;
+    const poll = async () => {
+      if (stopped || busy || !sessionId) return;
+      busy = true;
+      try {
+        const step = (await api.chatActivity(sessionId, undefined, pending.service))?.result;
+        if (!stopped) { state.agentStep = ['thinking', 'tool'].includes(step?.phase) ? step : null; changed(); }
+      } catch (error) {
+        if (error?.status === 404) stopped = true;   // an older Agent without the activity endpoint
+      } finally { busy = false; }
+    };
+    const timer = setInterval(poll, 1000);
+    return () => { stopped = true; clearInterval(timer); state.agentStep = null; };
+  };
   const run = async () => {
     active = true; state.agentLoading = true; pending.status = 'running';
     const answer = answerMessage(); delete answer.errorKey; delete answer.publicError; answer.retryable = false;
     emit(true);
+    const stopSteps = watchSteps();
     let reader;
     const abort = new AbortController();
     let idle = setTimeout(() => abort.abort(), pending.mode === 'stream' ? 90000 : 300000);
@@ -261,6 +279,7 @@ export function createAgentChat({ state, api, storage = localStorage, changed, o
       }
     } finally {
       clearTimeout(idle);
+      stopSteps();
       try { await reader?.cancel(); } catch { /* A disconnected stream is already closed. */ }
       active = false; state.agentLoading = false; emit(true);
       if (agentCacheKey(state.settings.agentPath) !== key) { switchService(); emit(); void historyStore.open(); }

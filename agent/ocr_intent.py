@@ -112,13 +112,13 @@ def uncertain(message, **fields):
             "confidence": 0.0, "reason": message}
 
 
-def _model(phase, payload):
+def _model(phase, payload, source_id=None):
     from agent import run_ocr_intent_agent
     from tool import extract_json_from_agent_result, open_prompt
 
     answer = run_ocr_intent_agent(open_prompt(
         "ocr_intent", phase=phase, payload=json.dumps(payload, ensure_ascii=False),
-    ))
+    ), phase=phase, source_id=source_id)
     result = extract_json_from_agent_result(answer)
     if not isinstance(result, dict):
         raise ValueError("OCR judgment must be a JSON object")
@@ -295,7 +295,7 @@ def judge_ocr_intent(msgid=None, ocr_text="", image_path=None, *, enrich_existin
     accounts, accounts_available = account_options()
     extracted = _model("extract", {"msgid": msgid, "ocr_text": ocr_text,
                                   "accounts": accounts, "accounts_available": accounts_available,
-                                  "category_options": options})
+                                  "category_options": options}, msgid)
     if extracted.get("image_intent") == "non_transaction" and extracted.get("is_transaction") is False:
         if extracted.get("needs_review") is False and 0.8 <= float(extracted.get("confidence", 0)) <= 1:
             return {**extracted, "image_intent": "non_transaction"}
@@ -328,7 +328,7 @@ def judge_ocr_intent(msgid=None, ocr_text="", image_path=None, *, enrich_existin
         evidence_by_bill[bill["DealingNumber"]] = row
         body = text((row or {}).get("body"))
         model_bills.append({**bill, "mail_body": body[:8000], "mail_truncated": len(body) > 8000})
-    decision = _model("compare", {"receipt": receipt, "ocr_text": ocr_text, "candidates": model_bills})
+    decision = _model("compare", {"receipt": receipt, "ocr_text": ocr_text, "candidates": model_bills}, msgid)
     target = decision.get("DealingNumber")
     selected = next((bill for bill in candidates if type(target) is int and bill["DealingNumber"] == target), None)
     if (decision.get("decision") != "match" or selected is None or decision.get("needs_review") is not False

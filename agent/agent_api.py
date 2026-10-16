@@ -31,6 +31,7 @@ from visualization_models import ChatTurnResult
 from visualization_context import read_visualization_history
 from chat_history import ChatHistoryStore, ChatSessionDeletedError, validate_session_id
 from context_manager import ContextBusyError
+import agent_activity
 from automation import reply_to_insight
 from runtime_settings import get_setting, get_language, prompt_language
 from uuid import uuid4
@@ -530,9 +531,13 @@ def enrich_adr(req: ADREnrichmentRequest):
 @app.post("/agent/OCR_request", response_model=OCR_Response_structure, status_code=status.HTTP_200_OK)
 async def OCR_request(
     promptInput: str = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    source_id: str | None = Form(None),
 ):
     try:
+        # Optional "ocr:<msgid>:<n>" so the log can count distinct images; never free text.
+        if source_id is not None and not re.fullmatch(r"[A-Za-z0-9:_.@-]{1,200}", source_id):
+            return OCR_Response_structure(success=False, result=None, stating_code="400", error="Invalid source_id")
         file_bytes = await file.read()
 
         if not file_bytes:
@@ -548,7 +553,7 @@ async def OCR_request(
         prompt = open_prompt("ocr_extract", promptInput=promptInput)
 
         # The model call takes seconds; run it off the event loop so health checks and chat stay responsive.
-        result_text = await run_in_threadpool(OCR_qianwenVL, img_base64, prompt)
+        result_text = await run_in_threadpool(OCR_qianwenVL, img_base64, prompt, source_id)
 
         return OCR_Response_structure(
             success=True,
@@ -634,6 +639,16 @@ class ChatSessionUpdate(BaseModel):
 @app.get("/agent/chat/sessions", tags=["Chat history"])
 def chat_sessions(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
     return chat_history_response(lambda store: store.sessions(limit, offset))
+
+
+@app.get("/agent/chat/sessions/{session_id}/activity", tags=["Chat history"])
+def chat_activity(session_id: str):
+    """What the session's running turn is doing now: idle, thinking, or the tool it runs (name only)."""
+    try:
+        validate_session_id(session_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return {"success": True, "result": agent_activity.current(session_id), "error": None, "status_code": 200}
 
 
 @app.get("/agent/chat/sessions/{session_id}/history", tags=["Chat history"])
