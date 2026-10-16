@@ -2,15 +2,24 @@
 
 [简体中文](README.md) | [日本語](README.ja.md) | **English**
 
-**Organizes your financial records automatically, explains every change, and keeps telling you how far you are from your goals.**
+**Turns bank notifications, receipts and statement files into a ledger you can trust, and gets more accurate, and needs you less, the more you use it.**
 
-GUILIU is an AI personal finance workspace that runs on your own computer. It gathers spending automatically from bank notification emails, receipt photos and Alipay / WeChat Pay statements, and turns it into a trustworthy ledger. Report-style pages and an analytical Agent then show you where the money went, how this month differs from last month, and how far you are from your savings goals.
+GUILIU (归流, "flowing back") is an AI bookkeeping and finance analysis tool that runs on your own computer. The name comes from the loops that run through the whole project: every confirmation and correction you make flows back into the system as rules and memory it can reuse next time.
 
-GUILIU takes care of day-to-day entry, categorization and duplicate checks; you only handle the few exceptions that need your confirmation.
+The division of work is simple: **AI handles the inputs that can't be predicted; local code handles everything that can.** Bank notifications in every format, all kinds of receipts, messy merchant names and statement files from different sources go to a language model to be understood. Rule validation, duplicate checks, bookkeeping and balances are done by local code with fixed logic.
+
+Most agents work in the background. Each stage has its own dedicated agent that the backend calls directly at that stage: writing parsing rules for a new bank's notifications, looking merchants up online before categorizing them, and finding evidence in emails and receipts to fill in item details. Only when one of them isn't sure does the question come to you. The agent you talk to is the analysis agent: ask in plain language, and it follows the links layer by layer (bills, item lines, the related emails and receipts) and answers with a conclusion, key figures and charts.
 
 ![GUILIU overview: spending this period, asset change, this month against last month, bill heatmap and category drivers](docs/screenshots/overview.png)
 
 > The accounts, transactions and conversations in the screenshots are fictional demo data from an isolated local copy of 0.1.0-rc.15. The screenshots show the Chinese interface; GUILIU also runs in Japanese and English.
+
+## Gets better as you use it
+
+- **Parsing rules**: when a new bank or notification format appears, the model writes a parsing rule, saved per bank once it passes local validation; later emails of the same kind are parsed by the rule without calling the model.
+- **Category memory**: categories are stored in a vector database and reused the next time the same merchant appears; a fix made in correction mode updates that merchant's past bills and the memory together.
+- **Human in the loop**: transactions the system isn't sure about come to you, and your answer is kept so the same question isn't asked again.
+- **Accumulated data**: the more records there are, the better deep search can piece several emails and receipts into one complete order, and the closer the analysis gets to how you actually spend.
 
 ## How bills flow in
 
@@ -177,10 +186,10 @@ The launcher starts the frontend, backend and Agent together, picks free ports (
 
 ## Status
 
-0.1 release candidate: the core bookkeeping, search, asset, goal and Agent analysis features are usable.
+0.1 series (regular releases since 0.1.1): the core bookkeeping, search, asset, goal and Agent analysis features are usable.
 
 - Fully verified on Windows only so far.
-- Text embeddings currently use OpenAI; supported currencies are currently Japanese yen and Chinese yuan.
+- Text embeddings currently use OpenAI; accounts and bills support Japanese yen, Chinese yuan and US dollars, with totals in yen or yuan.
 - Some bank emails do not state a time zone; those are interpreted as Japan time.
 
 ## License
